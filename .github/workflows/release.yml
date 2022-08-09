@@ -1,0 +1,133 @@
+#
+# Copyright (c) 2021 Red Hat, Inc.
+# This program and the accompanying materials are made
+# available under the terms of the Eclipse Public License 2.0
+# which is available at https://www.eclipse.org/legal/epl-2.0/
+#
+# SPDX-License-Identifier: EPL-2.0
+#
+
+name: Release Che Theia
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'The version that is going to be released. Should be in format 7.y.z'
+        required: true
+        default: ''
+      forceRecreateTags:
+        description: If true, tags will be recreated. Use with caution
+        required: false
+        default: 'false'
+      pushToNpmJs:
+        description: If true, will push packages to npmjs
+        required: false
+        default: 'true'
+
+jobs:
+  build:
+    runs-on: ubuntu-20.04
+    steps:
+    - uses: actions/checkout@v2
+      name: Checkout che-theia source code
+      with:
+        fetch-depth: 0
+    - name: Check existing tags
+      run: |
+        set +e
+        RECREATE_TAGS=${{ github.event.inputs.forceRecreateTags }}
+        VERSION=${{ github.event.inputs.version }}
+        EXISTING_TAG=$(git ls-remote --exit-code origin refs/tags/${VERSION})
+        if [[ -n ${EXISTING_TAG} ]]; then
+          if [[ ${RECREATE_TAGS} == "true" ]]; then
+            echo "[INFO] Removing tag for ${VERSION} version. New tag will be recreated during release."
+            git push origin :$VERSION
+          else
+            echo "[ERROR] Cannot proceed with release - tag ${EXISTING_TAG} already exists."
+            exit 1
+          fi
+        else
+          echo "[INFO] No existing tags detected for $VERSION"
+        fi
+    - uses: actions/setup-node@v1
+      name: Configuring nodejs 14.x version
+      with:
+        node-version: '14.x'
+    - name: Login to docker.io
+      uses: docker/login-action@v1
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_PASSWORD }}
+        registry: docker.io
+    - name: Login to quay.io
+      uses: docker/login-action@v1
+      with:
+        username: ${{ secrets.QUAY_USERNAME }}
+        password: ${{ secrets.QUAY_PASSWORD }}
+        registry: quay.io
+    - name: Prepare release
+      run: |
+        git config --global user.name "Mykhailo Kuznietsov"
+        git config --global user.email "mkuznets@redhat.com"
+        export GITHUB_TOKEN=${{ secrets.CHE_BOT_GITHUB_TOKEN }}
+        export AKAMAI_CHE_AUTH=${{ secrets.AKAMAI_CHE_AUTH }}
+        ./make-release.sh --version ${{ github.event.inputs.version }}
+    - name: Build and publish images
+      run: |
+        docker image prune -a -f
+        ./build.sh --root-yarn-opts:--ignore-scripts --dockerfile:Dockerfile.alpine --push
+      env:
+        CDN_PREFIX: https://static.developers.redhat.com/che/theia_artifacts/
+        MONACO_CDN_PREFIX: https://cdn.jsdelivr.net/npm/
+    - name: Set-up npmjs auth token
+      if: github.event.inputs.pushToNpmJs == true 
+      run: printf "//registry.npmjs.org/:_authToken=${{ secrets.CHE_NPM_AUTH_TOKEN }}\n" >> ~/.npmrc
+    - name: Publish packages to npmjs
+      if: github.event.inputs.pushToNpmJs == true 
+      run: yarn publish:next
+  notify:
+    runs-on: ubuntu-20.04
+    needs: build
+    if: always() && ((needs.build.result == 'failure') || (needs.build.result == 'success'))
+    steps:
+    - name: Create failure MM message
+      if: ${{ needs.build.result == 'failure' }}
+      run: |
+        echo "{\"text\":\":no_entry_sign: Che Theia ${{ github.event.inputs.version }} release has failed: https://github.com/eclipse-che/che-theia/actions/workflows/release.yml\"}" > mattermost.json
+    - name: Create success MM message
+      if: ${{ needs.build.result == 'success' }}
+      run: |
+        echo "{\"text\":\":white_check_mark: Che Theia ${{ github.event.inputs.version }} has been released: https://quay.io/eclipse/che-theia-dev:${{ github.event.inputs.version }} https://quay.io/eclipse/che-theia:${{ github.event.inputs.version }} https://quay.io/eclipse/che-theia-endpoint-runtime-binary:${{ github.event.inputs.version }}\"}" > mattermost.json
+    - name: Send MM message
+      uses: mattermost/action-mattermost-notify@1.1.0
+      env:
+        MATTERMOST_WEBHOOK_URL: ${{ secrets.MATTERMOST_WEBHOOK_URL }}
+        MATTERMOST_CHANNEL: eclipse-che-releases
+        MATTERMOST_USERNAME: che-bot
+  # TODO: uncomment this when we're happy that travis is working for PRs
+  # travis-release:
+  #   needs: build
+  #   runs-on: ubuntu-latest
+  #   continue-on-error: true
+  #   steps:
+  #   - name: Trigger build on Travis CI
+  #     run: |
+  #       body="{
+  #       \"request\":{
+  #       \"config\": {
+  #         \"env\": {
+  #           \"global\": [
+  #             \"TAG=${{ github.event.inputs.version }}\"
+  #            ]
+  #          }
+  #       }
+  #       }}"
+
+  #       curl -s -X POST \
+  #       -H "Content-Type: application/json" \
+  #       -H "Accept: application/json" \
+  #       -H "Travis-API-Version: 3" \
+  #       -H "Authorization: token ${{ secrets.TRAVIS_TOKEN }}" \
+  #       -d "$body" \
+  #       https://api.travis-ci.com/repo/eclipse-che%2Fche-theia/requests

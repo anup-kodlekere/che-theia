@@ -1,0 +1,66 @@
+#
+# Copyright (c) 2021 Red Hat, Inc.
+# This program and the accompanying materials are made
+# available under the terms of the Eclipse Public License 2.0
+# which is available at https://www.eclipse.org/legal/epl-2.0/
+#
+# SPDX-License-Identifier: EPL-2.0
+#
+
+name: Build & Publish `next`
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-20.04
+    steps:
+    - uses: actions/checkout@v2
+      name: Checkout che-theia source code
+    - uses: actions/setup-node@v1
+      name: Configuring nodejs 14.x version
+      with:
+        node-version: '14.x'
+    - name: Login to docker.io
+      uses: docker/login-action@v1
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_PASSWORD }}
+        registry: docker.io
+    - name: Login to quay.io
+      uses: docker/login-action@v1
+      with:
+        username: ${{ secrets.QUAY_USERNAME }}
+        password: ${{ secrets.QUAY_PASSWORD }}
+        registry: quay.io
+    - name: Build and publish images
+      run: |
+        docker image prune -a -f
+        ./build.sh --root-yarn-opts:--ignore-scripts --dockerfile:Dockerfile.alpine --push
+      env:
+        CDN_PREFIX: https://static.developers.redhat.com/che/theia_artifacts/
+        MONACO_CDN_PREFIX: https://cdn.jsdelivr.net/npm/
+    - name: Set-up npmjs auth token
+      run: printf "//registry.npmjs.org/:_authToken=${{ secrets.CHE_NPM_AUTH_TOKEN }}\n" >> ~/.npmrc
+    - name: Publish packages to npmjs
+      run: yarn publish:next
+  notify:
+    runs-on: ubuntu-20.04
+    needs: build
+    if: always() && (needs.build.result == 'failure')
+    steps:
+    - name: Create failure MM message
+      if: ${{ failure() }}
+      run: |
+        echo "{\"text\":\":no_entry_sign: Next Che Theia build has failed: https://github.com/eclipse-che/che-theia/actions/workflows/next-build.yml\"}" > mattermost.json
+    - name: Send MM message
+      if: ${{ success() }} || ${{ failure() }}
+      uses: mattermost/action-mattermost-notify@1.1.0
+      env:
+        MATTERMOST_WEBHOOK_URL: ${{ secrets.MATTERMOST_WEBHOOK_URL }}
+        MATTERMOST_CHANNEL: eclipse-che-releases
+        MATTERMOST_USERNAME: che-bot
