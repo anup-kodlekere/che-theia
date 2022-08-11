@@ -19,6 +19,9 @@ before_install:
   - nproc
   - cat /sys/fs/cgroup/cpuset/cpuset.cpus
   - free -h
+  # use buildkit
+  - export DOCKER_BUILDKIT=1
+  - export BUILDKIT_PROGRESS=plain
   #- |
   #  if [[ "${TRAVIS_CPU_ARCH}" == "ppc64le" ]]; then
   #    # fix cpu count to avoid OOM failure
