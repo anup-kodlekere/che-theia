@@ -78,9 +78,10 @@ jobs:
 #       env: INFRA=IBMCloud
     
     - &docker-build
-      name: Docker build (Alpine) on x86
-      os: linux
-      env: DIST=ubi8 INFRA=X86
+      name: Docker build (ubi8) on HDC-POK
+      os: linux-ppc64le
+      group: genesis
+      env: DIST=ubi8 INFRA=HDC-with-POK-setup
       install: skip
       script:
       - |
@@ -89,26 +90,26 @@ jobs:
         docker pull quay.io/eclipse/che-theia-dev:next-travis && \
         docker tag quay.io/eclipse/che-theia-dev:next-travis eclipse/che-theia-dev:next-travis || true
         TAG=$TAG-$(arch) ./build.sh --root-yarn-opts:--ignore-scripts --dockerfile:Dockerfile.$DIST
-    - <<: *docker-build
-      name: Docker build (ubi8) on power-hdc
-      os: linux-ppc64le
-      dist: bionic
-      env: DIST=ubi8 INFRA=HDC
-    - <<: *docker-build
-      name: Docker build (ubi8) on power-pok
-      os: linux-ppc64le
-      group: custom
-      env: DIST=ubi8 INFRA=POK
-    - <<: *docker-build
-      name: Docker build (ubi8) on power-pok-vm
-      os: linux-ppc64le
-      group: genesis
-      env: DIST=ubi8 INFRA=POK-VM
-    - <<: *docker-build
-      name: Docker build (ubi8) on ibmcloud
-      os: linux-ppc64le
-      group: ibm-cloud
-      dist: bionic
-      env: DIST=ubi8 INFRA=IBM-Cloud
+#     - <<: *docker-build
+#       name: Docker build (ubi8) on power-hdc
+#       os: linux-ppc64le
+#       dist: bionic
+#       env: DIST=ubi8 INFRA=HDC
+#     - <<: *docker-build
+#       name: Docker build (ubi8) on power-pok
+#       os: linux-ppc64le
+#       group: custom
+#       env: DIST=ubi8 INFRA=POK
+#     - <<: *docker-build
+#       name: Docker build (ubi8) on power-pok-vm
+#       os: linux-ppc64le
+#       group: genesis
+#       env: DIST=ubi8 INFRA=POK-VM
+#     - <<: *docker-build
+#       name: Docker build (ubi8) on ibmcloud
+#       os: linux-ppc64le
+#       group: ibm-cloud
+#       dist: bionic
+#       env: DIST=ubi8 INFRA=IBM-Cloud
 
    
