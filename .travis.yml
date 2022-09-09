@@ -47,40 +47,40 @@ env:
 
 jobs:
   include: 
-    - &node-build
-      stage: Build
-      name: Node Build on x86
-      os: linux
-      install:
-        - sudo apt-get update && sudo apt-get install -y libsecret-1-dev
-      script: yarn
-      env: INFRA=X86
-    - <<: *node-build
-      name: Node Build on power-hdc
-      os: linux-ppc64le
-      dist: bionic
-      env: INFRA=HDC
-    - <<: *node-build
-      name: Node Build on power-pok
-      os: linux-ppc64le
-      group: custom
-      env: INFRA=POK
-    - <<: *node-build
-      name: Node Build on power-pok-vm
-      os: linux-ppc64le
-      group: genesis
-      env: INFRA=POK-VM
-    - <<: *node-build
-      name: Node Build on ibmcloud
-      os: linux-ppc64le
-      group: ibm-cloud
-      dist: bionic
-      env: INFRA=IBMCloud
+#     - &node-build
+#       stage: Build
+#       name: Node Build on x86
+#       os: linux
+#       install:
+#         - sudo apt-get update && sudo apt-get install -y libsecret-1-dev
+#       script: yarn
+#       env: INFRA=X86
+#     - <<: *node-build
+#       name: Node Build on power-hdc
+#       os: linux-ppc64le
+#       dist: bionic
+#       env: INFRA=HDC
+#     - <<: *node-build
+#       name: Node Build on power-pok
+#       os: linux-ppc64le
+#       group: custom
+#       env: INFRA=POK
+#     - <<: *node-build
+#       name: Node Build on power-pok-vm
+#       os: linux-ppc64le
+#       group: genesis
+#       env: INFRA=POK-VM
+#     - <<: *node-build
+#       name: Node Build on ibmcloud
+#       os: linux-ppc64le
+#       group: ibm-cloud
+#       dist: bionic
+#       env: INFRA=IBMCloud
     
     - &docker-build
       name: Docker build (Alpine) on x86
       os: linux
-      env: DIST=alpine INFRA=X86
+      env: DIST=ubi8 INFRA=X86
       install: skip
       script:
       - |
@@ -89,10 +89,6 @@ jobs:
         docker pull quay.io/eclipse/che-theia-dev:next-travis && \
         docker tag quay.io/eclipse/che-theia-dev:next-travis eclipse/che-theia-dev:next-travis || true
         TAG=$TAG-$(arch) ./build.sh --root-yarn-opts:--ignore-scripts --dockerfile:Dockerfile.$DIST
-    - <<: *docker-build
-      name: Docker build (ubi8) on x86
-      os: linux
-      env: DIST=ubi8 INFRA=X86
     - <<: *docker-build
       name: Docker build (ubi8) on power-hdc
       os: linux-ppc64le
