@@ -22,14 +22,6 @@ before_install:
   # use buildkit
   - export DOCKER_BUILDKIT=1
   - export BUILDKIT_PROGRESS=plain
-  #- |
-  #  if [[ "${TRAVIS_CPU_ARCH}" == "ppc64le" ]]; then
-  #    # fix cpu count to avoid OOM failure
-  #    cat /proc/stat > /tmp/stat
-  #    sed -i '/^cpu[4-9]/d' /tmp/stat
-  #    sed -i '/^cpu[0-9][0-9]/d' /tmp/stat
-  #    sudo mount --bind /tmp/stat /proc/stat
-  #  fi
 
 install:
   # TODO when we're confident that sha-tagged travis-built images won't collide with GHA built ones, we can remove the -travis suffix here
@@ -47,41 +39,34 @@ env:
 
 jobs:
   include: 
-#     - &node-build
-#       stage: Build
-#       name: Node Build on x86
-#       os: linux
-#       install:
-#         - sudo apt-get update && sudo apt-get install -y libsecret-1-dev
-#       script: yarn
-#       env: INFRA=X86
-#     - <<: *node-build
-#       name: Node Build on power-hdc
-#       os: linux-ppc64le
-#       dist: bionic
-#       env: INFRA=HDC
-#     - <<: *node-build
-#       name: Node Build on power-pok
-#       os: linux-ppc64le
-#       group: custom
-#       env: INFRA=POK
-#     - <<: *node-build
-#       name: Node Build on power-pok-vm
-#       os: linux-ppc64le
-#       group: genesis
-#       env: INFRA=POK-VM
-#     - <<: *node-build
-#       name: Node Build on ibmcloud
-#       os: linux-ppc64le
-#       group: ibm-cloud
-#       dist: bionic
-#       env: INFRA=IBMCloud
+    - &node-build
+      stage: Build
+      name: Node Build on power-hdc
+      os: linux-ppc64le
+      install:
+        - sudo apt-get update && sudo apt-get install -y libsecret-1-dev
+      script: yarn
+      env: INFRA=HDC
+    - <<: *node-build
+      name: Node Build on power-pok
+      os: linux-ppc64le
+      group: lxd
+      env: INFRA=POK-BAREMETAL
+    - <<: *node-build
+      name: Node Build on power-pok-nvme
+      os: linux-ppc64le
+      group: genesis
+      env: INFRA=POK-NVME-BM
+    - <<: *node-build
+      name: Node Build on ibmcloud
+      os: linux-ppc64le
+      group: ibm-cloud
+      env: INFRA=IBMCloud
     
     - &docker-build
       name: Docker build (ubi8) on HDC-POK
       os: linux-ppc64le
-      group: genesis
-      env: DIST=ubi8 INFRA=HDC-with-POK-setup
+      env: DIST=ubi8 INFRA=HDC
       install: skip
       script:
       - |
@@ -90,26 +75,20 @@ jobs:
         docker pull quay.io/eclipse/che-theia-dev:next-travis && \
         docker tag quay.io/eclipse/che-theia-dev:next-travis eclipse/che-theia-dev:next-travis || true
         TAG=$TAG-$(arch) ./build.sh --root-yarn-opts:--ignore-scripts --dockerfile:Dockerfile.$DIST
-#     - <<: *docker-build
-#       name: Docker build (ubi8) on power-hdc
-#       os: linux-ppc64le
-#       dist: bionic
-#       env: DIST=ubi8 INFRA=HDC
-#     - <<: *docker-build
-#       name: Docker build (ubi8) on power-pok
-#       os: linux-ppc64le
-#       group: custom
-#       env: DIST=ubi8 INFRA=POK
-#     - <<: *docker-build
-#       name: Docker build (ubi8) on power-pok-vm
-#       os: linux-ppc64le
-#       group: genesis
-#       env: DIST=ubi8 INFRA=POK-VM
-#     - <<: *docker-build
-#       name: Docker build (ubi8) on ibmcloud
-#       os: linux-ppc64le
-#       group: ibm-cloud
-#       dist: bionic
-#       env: DIST=ubi8 INFRA=IBM-Cloud
+    - <<: *docker-build
+      name: Docker build (ubi8) on power-pok
+      os: linux-ppc64le
+      group: lxd
+      env: DIST=ubi8 INFRA=POK-BAREMETAL
+    - <<: *docker-build
+      name: Docker build (ubi8) on power-pok-nvme-bm
+      os: linux-ppc64le
+      group: genesis
+      env: DIST=ubi8 INFRA=POK-NVME-BM
+    - <<: *docker-build
+      name: Docker build (ubi8) on ibmcloud
+      os: linux-ppc64le
+      group: ibm-cloud
+      env: DIST=ubi8 INFRA=IBM-Cloud
 
    
