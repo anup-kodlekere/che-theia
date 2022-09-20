@@ -40,7 +40,7 @@ env:
 jobs:
   include: 
     - &node-build
-      stage: Build
+      stage: Build node
       name: Node Build on power-hdc
       os: linux-ppc64le
       install:
@@ -53,10 +53,10 @@ jobs:
       group: lxd
       env: INFRA=POK-BAREMETAL
     - <<: *node-build
-      name: Node Build on power-pok-nvme
+      name: Node Build on power-pok-nvme-vm
       os: linux-ppc64le
       group: genesis
-      env: INFRA=POK-NVME-BM
+      env: INFRA=POK-NVME-VM
     - <<: *node-build
       name: Node Build on ibmcloud
       os: linux-ppc64le
@@ -66,6 +66,7 @@ jobs:
     - &docker-build
       name: Docker build (ubi8) on HDC-POK
       os: linux-ppc64le
+      stage: docker build
       env: DIST=ubi8 INFRA=HDC
       install: skip
       script:
@@ -81,10 +82,10 @@ jobs:
       group: lxd
       env: DIST=ubi8 INFRA=POK-BAREMETAL
     - <<: *docker-build
-      name: Docker build (ubi8) on power-pok-nvme-bm
+      name: Docker build (ubi8) on power-pok-nvme-vm
       os: linux-ppc64le
       group: genesis
-      env: DIST=ubi8 INFRA=POK-NVME-BM
+      env: DIST=ubi8 INFRA=POK-NVME-VM
     - <<: *docker-build
       name: Docker build (ubi8) on ibmcloud
       os: linux-ppc64le
