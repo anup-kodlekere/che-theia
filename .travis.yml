@@ -43,29 +43,31 @@ jobs:
       stage: Build node
       name: Node Build on power-hdc
       os: linux-ppc64le
+      dist: bionic
       install:
         - sudo apt-get update && sudo apt-get install -y libsecret-1-dev
       script: yarn
       env: INFRA=HDC
     - <<: *node-build
-      name: Node Build on power-pok
+      name: Node Build on power-hdc-p9
       os: linux-ppc64le
       group: lxd
-      env: INFRA=POK-BAREMETAL
-    - <<: *node-build
-      name: Node Build on power-pok-nvme-vm
-      os: linux-ppc64le
-      group: genesis
-      env: INFRA=POK-NVME-VM
-    - <<: *node-build
-      name: Node Build on ibmcloud
-      os: linux-ppc64le
-      group: ibm-cloud
-      env: INFRA=IBMCloud
+      env: INFRA=HDC-P9
+#     - <<: *node-build
+#       name: Node Build on power-pok-nvme-vm
+#       os: linux-ppc64le
+#       group: genesis
+#       env: INFRA=POK-NVME-VM
+#     - <<: *node-build
+#       name: Node Build on ibmcloud
+#       os: linux-ppc64le
+#       group: ibm-cloud
+#       env: INFRA=IBMCloud
     
     - &docker-build
-      name: Docker build (ubi8) on HDC-POK
+      name: Docker build (ubi8) on HDC
       os: linux-ppc64le
+      dist: bionic
       stage: docker build
       env: DIST=ubi8 INFRA=HDC
       install: skip
@@ -77,19 +79,19 @@ jobs:
         docker tag quay.io/eclipse/che-theia-dev:next-travis eclipse/che-theia-dev:next-travis || true
         TAG=$TAG-$(arch) ./build.sh --root-yarn-opts:--ignore-scripts --dockerfile:Dockerfile.$DIST
     - <<: *docker-build
-      name: Docker build (ubi8) on power-pok
+      name: Docker build (ubi8) on HDC-P9
       os: linux-ppc64le
       group: lxd
-      env: DIST=ubi8 INFRA=POK-BAREMETAL
-    - <<: *docker-build
-      name: Docker build (ubi8) on power-pok-nvme-vm
-      os: linux-ppc64le
-      group: genesis
-      env: DIST=ubi8 INFRA=POK-NVME-VM
-    - <<: *docker-build
-      name: Docker build (ubi8) on ibmcloud
-      os: linux-ppc64le
-      group: ibm-cloud
-      env: DIST=ubi8 INFRA=IBM-Cloud
+      env: DIST=ubi8 INFRA=HDC-P9
+#     - <<: *docker-build
+#       name: Docker build (ubi8) on power-pok-nvme-vm
+#       os: linux-ppc64le
+#       group: genesis
+#       env: DIST=ubi8 INFRA=POK-NVME-VM
+#     - <<: *docker-build
+#       name: Docker build (ubi8) on ibmcloud
+#       os: linux-ppc64le
+#       group: ibm-cloud
+#       env: DIST=ubi8 INFRA=IBM-Cloud
 
    
