@@ -44,6 +44,7 @@ jobs:
       name: Node Build on power-hdc
       os: linux
       arch: ppc64le
+      dist: bionic
       install:
         - sudo apt-get update && sudo apt-get install -y libsecret-1-dev
       script: yarn
@@ -53,6 +54,7 @@ jobs:
       name: Docker build (ubi8) on HDC
       os: linux
       arch: ppc64le
+      dist: bionic
       stage: docker build
       env: DIST=ubi8 INFRA=HDC
       install: skip
